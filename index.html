@@ -193,13 +193,10 @@
     <div class="card-title">商品登録</div>
     <form id="itemForm">
       <div class="form-group">
-        <label for="newItemName">商品名:</label>
-        <input type="text" id="newItemName" required autocomplete="off" style="width:9em;">
-        <label for="newItemPrice">金額:</label>
-        <input type="number" id="newItemPrice" min="0" value="0" required style="width:6em;">
-        <label for="newItemCost">原価（1個あたり）:</label>
-        <input type="number" id="newItemCost" min="0" value="0" required style="width:6em;">
-        <button type="submit">追加</button>
+        <div><label for="newItemName">商品名:</label><input type="text" id="newItemName" required autocomplete="off" style="width:9em;"></div>
+        <div><label for="newItemPrice">金額:</label><input type="number" id="newItemPrice" min="0" value="0" required style="width:6em;"></div>
+        <div><label for="newItemCost">原価（1個あたり）:</label><input type="number" id="newItemCost" min="0" value="0" required style="width:6em;"></div>
+        <div><button type="submit">追加</button></div>
       </div>
     </form>
     <div id="registeredItems">
@@ -480,9 +477,6 @@
           <span>
             <b>${sale.name}</b> × ${sale.count}個 = <b>${sale.total}円</b>
             <small style="margin-left:1em;color:#666;">${sale.timestamp}</small>
-            <span style="margin-left:1em;color:#117533;font-weight:bold;">
-              利益: ${sale.profit ?? (sale.price - (sale.cost ?? 0)) * sale.count}円
-            </span>
           </span>
           <button class="del-btn" onclick="deleteSale(${i})">削除</button>
         `;
