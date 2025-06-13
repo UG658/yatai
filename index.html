@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>屋台売上管理</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+      margin: 0;
+      background: #f7fafc;
+      color: #223;
+      min-height: 100vh;
+    }
+    h1 {
+      color: #12539e;
+      margin: 1.2em 0 0.6em 0;
+      text-align: center;
+      font-size: 2.2em;
+      letter-spacing: 0.05em;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px #0001;
+      padding: 1.5em 2em;
+      margin: 1.5em auto;
+      max-width: 700px;
+      width: 95vw;
+      transition: box-shadow 0.2s;
+    }
+    .card-title { font-size: 1.2em; font-weight: bold; color: #2563a6; margin-bottom: 0.7em; letter-spacing: 0.04em; }
+    form { margin-bottom: 1em; display: flex; flex-wrap: wrap; align-items: center; gap: 1em 1.2em; }
+    input, select, button {
+      margin: 0.3em 0.5em 0.3em 0;
+      font-size: 1.1em;
+      border-radius: 7px;
+      border: 1px solid #b2c5e6;
+      padding: 0.5em 0.8em;
+      outline: none;
+      transition: border 0.2s, box-shadow 0.2s;
+      box-sizing: border-box;
+    }
+    input:focus, select:focus {
+      border: 2px solid #4a90e2;
+      background: #f0f6ff;
+    }
+    button {
+      background: #3385e6;
+      color: #fff;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      min-width: 80px;
+      min-height: 38px;
+      letter-spacing: 0.03em;
+      box-shadow: 0 1px 2px #0001;
+      transition: background 0.2s;
+    }
+    button:hover:not(:disabled) { background: #2563a6; }
+    button:disabled { background: #bcd6f5; color: #fff; cursor: not-allowed; }
+    label { font-weight: bold; margin-right: 0.4em; font-size: 1.08em; color: #1a355d; }
+    
+    #registeredItems .item-btn {
+      display: inline-block;
+      margin: 0.2em 0.5em 0.2em 0;
+      padding: 0.4em 0.8em;
+      background: #d6e8ff;
+      border: 1px solid #b2c5e6;
+      border-radius: 7px;
+      cursor: default;
+      position: relative;
+      font-size: 1em;
+      font-weight: 500;
+      color: #2563a6;
+      min-width: 110px;
+      max-width: 92vw;
+      overflow-x: auto;
+    }
+    
+    #productSelection .product-btn {
+      display: inline-block;
+      margin: 0.3em 0.6em 0.3em 0;
+      padding: 0.8em 1.4em;
+      background: #4a90e2;
+      border: none;
+      border-radius: 9px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1.14em;
+      min-width: 120px;
+      min-height: 45px;
+      box-shadow: 0 2px 6px #0001;
+      transition: background 0.2s;
+    }
+    #productSelection .product-btn:hover:not(:disabled) { background: #357abd; }
+    #productSelection .product-btn:disabled { background: #a8c4f8; cursor: not-allowed; }
+    #modalOverlay {
+      display: none;
+      position: fixed;
+      top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      justify-content: center;
+      align-items: center;
+    }
+    #modal {
+      background: white;
+      padding: 1.2em 1.2em;
+      border-radius: 12px;
+      box-shadow: 0 0 14px rgba(0,0,0,0.15);
+      max-width: 95vw;
+      width: 350px;
+      text-align: center;
+    }
+    #modal input[type=number] { width: 7em; font-size: 1.15em; padding: 0.2em; margin-bottom: 1em; text-align: center; }
+    #productSummaryTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.6em;
+      margin-bottom: 0.7em;
+      font-size: 1.07em;
+      background: #f9fbff;
+      border-radius: 7px;
+      overflow: auto;
+      box-shadow: 0 1px 4px #0001;
+    }
+    #productSummaryTable th, #productSummaryTable td { padding: 0.7em 0.6em; text-align: center; border-bottom: 1px solid #e3eaf6; }
+    #productSummaryTable th { background: #e6f0ff; color: #12539e; font-weight: bold; }
+    #salesList li {
+      background: #f1f8ff;
+      border-radius: 9px;
+      padding: 0.7em 1em;
+      margin-bottom: 0.5em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.1em;
+      box-shadow: 0 1px 6px #0001;
+      flex-wrap: wrap;
+    }
+    .csv-btns { text-align: right; margin: 1em 0 1em 0; max-width: 700px; margin-left: auto; margin-right: auto; }
+    .csv-btns button { margin-right: 0.6em; font-size: 1em; padding: 0.5em 1.2em; border-radius: 7px; background: #ffd966; color: #7c5200; border: none; font-weight: bold; }
+    @media (max-width: 600px) {
+      h1 { font-size: 1.25em; }
+      .card, #salesList, .csv-btns { max-width: 100vw; width: 100vw; padding-left: 0.2em; padding-right: 0.2em; }
+      .card { padding: 0.8em 0.3em; }
+      #modal { width: 94vw; max-width: 94vw; }
+      #productSummaryTable th, #productSummaryTable td { padding: 0.5em 0.2em; font-size: 0.98em; }
+      form { gap: 0.5em 0.2em; }
+      #registeredItems .item-btn { font-size: 0.97em; min-width: 75px; max-width: 94vw; }
+      #productSelection .product-btn { font-size: 1em; min-width: 90px; min-height: 36px; padding: 0.4em 0.7em; }
+    }
+  </style>
+</head>
+<body>
+  <h1>屋台売上管理</h1>
+  <!-- 仕入れ原価入力欄 -->
+  <div class="card" style="margin-top:2em;">
+    <div id="costInputSection">
+      <label for="purchaseCost">仕入れ原価合計:</label>
+      <input type="number" id="purchaseCost" min="0" value="0" step="1" aria-label="仕入れ原価合計">
+      <span>円</span>
+    </div>
+  </div>
+  <!-- 商品登録 -->
+  <div class="card">
+    <div class="card-title">商品登録</div>
+    <form id="itemForm">
+      <label>商品名:</label>
+      <input type="text" id="newItemName" required autocomplete="off" style="width:9em;">
+      <label>金額:</label>
+      <input type="number" id="newItemPrice" min="0" value="0" required style="width:6em;">
+      <label>原価（1個あたり）:</label>
+      <input type="number" id="newItemCost" min="0" value="0" required style="width:6em;">
+      <button type="submit">追加</button>
+    </form>
+    <div id="registeredItems">
+      <h3>登録済み商品一覧</h3>
+      <div id="registeredItemsList"></div>
+    </div>
+  </div>
+  <!-- 商品別売上グラフ -->
+  <div class="card" id="productSalesChartCard">
+    <div class="card-title">商品別売上グラフ</div>
+    <div id="productSalesChart"></div>
+  </div>
+  <!-- 商品別売上集計 -->
+  <div class="card" id="productSummaryCard">
+    <div class="card-title">商品別売上集計</div>
+    <div id="productSummaryTableWrapper"></div>
+  </div>
+  <!-- 売上記録画面 -->
+  <div class="card">
+    <div id="productSelection">
+      <h2>売上記録 - 商品を選択してください</h2>
+      <div id="productButtons"></div>
+    </div>
+  </div>
+  <!-- 利益サマリー -->
+  <div id="profitSummary" aria-live="polite" aria-atomic="true"></div>
+  <!-- 個数入力モーダル -->
+  <div id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div id="modal">
+      <h3 id="modalTitle">個数を入力してください</h3>
+      <div id="modalItemName" style="margin-bottom:1em; font-weight:bold; font-size:1.1em;"></div>
+      <input type="number" id="modalItemCount" min="1" value="1" aria-label="個数入力">
+      <div>
+        <button id="modalSubmit">登録</button>
+        <button id="modalCancel">キャンセル</button>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1.5em;">
+    <div class="card-title" style="margin-bottom:0.6em;">売上履歴</div>
+    <div class="csv-btns">
+      <button id="downloadItemCsv">商品一覧CSV</button>
+      <button id="downloadSalesCsv">売上履歴CSV</button>
+    </div>
+    <ul id="salesList"></ul>
+    <div style="margin-top:1.2em;">
+      <span style="font-size:1.2em; font-weight:bold; color:#12539e;">合計売上:</span>
+      <span id="totalSales">0</span>
+      <span style="font-size:1.1em; color:#555;">円</span>
+    </div>
+  </div>
+  <!-- Google Charts loader -->
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+    // ==== 初期データ ====
+    let itemMaster = JSON.parse(localStorage.getItem('itemMaster') || '[]');
+    let salesData = JSON.parse(localStorage.getItem('salesData') || '[]');
+    let purchaseCost = Number(localStorage.getItem('purchaseCost') || 0);
+
+    // ==== 商品登録・解除 ====
+    const itemForm = document.getElementById('itemForm');
+    const newItemName = document.getElementById('newItemName');
+    const newItemPrice = document.getElementById('newItemPrice');
+    const newItemCost = document.getElementById('newItemCost');
+    const registeredItemsList = document.getElementById('registeredItemsList');
+
+    function renderRegisteredItems() {
+      registeredItemsList.innerHTML = '';
+      itemMaster.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'item-btn';
+        div.innerHTML = `${item.name} (${item.price}円) <span style="color:#777;font-size:0.97em;">原価${item.cost}円</span> 
+          <button class="remove-btn" title="削除" onclick="removeItem(${idx})">&times;</button>`;
+        registeredItemsList.appendChild(div);
+      });
+    }
+    window.removeItem = function(idx) {
+      if (confirm('本当に削除しますか？')) {
+        // その商品の売上履歴も残ります
+        itemMaster.splice(idx, 1);
+        localStorage.setItem('itemMaster', JSON.stringify(itemMaster));
+        renderAll();
+      }
+    };
+    itemForm.onsubmit = e => {
+      e.preventDefault();
+      const name = newItemName.value.trim();
+      const price = parseInt(newItemPrice.value, 10);
+      const cost = parseInt(newItemCost.value, 10);
+      if (!name || isNaN(price) || isNaN(cost)) return;
+      itemMaster.push({ name, price, cost });
+      localStorage.setItem('itemMaster', JSON.stringify(itemMaster));
+      newItemName.value = '';
+      newItemPrice.value = '0';
+      newItemCost.value = '0';
+      renderAll();
+    };
+
+    // ==== 売上記録 ====
+    const productButtons = document.getElementById('productButtons');
+    let currentProductIdx = null;
+    function renderProductButtons() {
+      productButtons.innerHTML = '';
+      itemMaster.forEach((item, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'product-btn';
+        btn.textContent = `${item.name}（${item.price}円）`;
+        btn.onclick = () => showModal(idx);
+        productButtons.appendChild(btn);
+      });
+      if (itemMaster.length === 0) {
+        const span = document.createElement('span');
+        span.textContent = '※商品を登録してください';
+        productButtons.appendChild(span);
+      }
+    }
+    // ==== モーダル ====
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalItemName = document.getElementById('modalItemName');
+    const modalItemCount = document.getElementById('modalItemCount');
+    const modalSubmit = document.getElementById('modalSubmit');
+    const modalCancel = document.getElementById('modalCancel');
+    function showModal(idx) {
+      currentProductIdx = idx;
+      modalItemName.textContent = `${itemMaster[idx].name}（${itemMaster[idx].price}円）`;
+      modalItemCount.value = 1;
+      modalOverlay.style.display = 'flex';
+      modalItemCount.focus();
+    }
+    function closeModal() {
+      modalOverlay.style.display = 'none';
+      currentProductIdx = null;
+    }
+    modalSubmit.onclick = () => {
+      const count = parseInt(modalItemCount.value, 10);
+      if (currentProductIdx == null || isNaN(count) || count < 1) return;
+      const item = itemMaster[currentProductIdx];
+      const total = item.price * count;
+      const profit = (item.price - item.cost) * count;
+      const now = new Date();
+      const timestamp = now.toLocaleString('ja-JP', { hour12: false });
+      salesData.unshift({ name: item.name, count, price: item.price, cost: item.cost, total, profit, timestamp });
+      localStorage.setItem('salesData', JSON.stringify(salesData));
+      closeModal();
+      renderAll();
+    };
+    modalCancel.onclick = closeModal;
+    modalOverlay.onclick = e => { if (e.target === modalOverlay) closeModal(); };
+
+    // ==== 売上履歴・削除 ====
+    const salesList = document.getElementById('salesList');
+    window.deleteSale = function(idx) {
+      if (confirm("この記録を削除しますか？")) {
+        salesData.splice(idx, 1);
+        localStorage.setItem('salesData', JSON.stringify(salesData));
+        renderAll();
+      }
+    };
+
+    // ==== 売上合計・利益サマリー ====
+    const totalSales = document.getElementById('totalSales');
+    const profitSummary = document.getElementById('profitSummary');
+    function renderProfitSummary() {
+      const totalProfit = salesData.reduce((sum, sale) => sum + (sale.profit ?? 0), 0);
+      const profitAfterCost = totalProfit - purchaseCost;
+      if (profitAfterCost < 0) {
+        profitSummary.textContent = `黒字まであと ${-profitAfterCost} 円`;
+        profitSummary.className = '';
+      } else {
+        profitSummary.textContent = `黒字です！累計利益 ${profitAfterCost} 円`;
+        profitSummary.className = 'positive';
+      }
+    }
+
+    // ==== 商品別集計表 ====
+    function renderProductSummaryTable() {
+      const wrapper = document.getElementById('productSummaryTableWrapper');
+      const summary = {};
+      itemMaster.forEach(item => {
+        summary[item.name] = { total: 0, count: 0, price: item.price };
+      });
+      salesData.forEach(sale => {
+        if (summary[sale.name]) {
+          summary[sale.name].total += sale.total;
+          summary[sale.name].count += sale.count;
+        }
+      });
+      let html = `<table id="productSummaryTable"><tr>
+        <th>商品名</th><th>売上金額</th><th>販売個数</th>
+      </tr>`;
+      for (const name in summary) {
+        html += `<tr>
+          <td>${name}</td>
+          <td class="highlight-amount">${summary[name].total}</td>
+          <td class="highlight-count">${summary[name].count}</td>
+        </tr>`;
+      }
+      html += `</table>`;
+      wrapper.innerHTML = html;
+    }
+
+    // ==== 商品別グラフ ====
+    function renderProductSalesChart() {
+      if (!window.google || !google.charts) return;
+      google.charts.load('current', { packages: ['corechart'] });
+      google.charts.setOnLoadCallback(drawChart);
+      function drawChart() {
+        const summary = {};
+        itemMaster.forEach(item => {
+          summary[item.name] = { total: 0, count: 0 };
+        });
+        salesData.forEach(sale => {
+          if (summary[sale.name]) {
+            summary[sale.name].total += sale.total;
+            summary[sale.name].count += sale.count;
+          }
+        });
+        const dataArr = [['商品名', '売上金額', '販売個数']];
+        for (const name in summary) {
+          dataArr.push([name, summary[name].total, summary[name].count]);
+        }
+        const data = google.visualization.arrayToDataTable(dataArr);
+        const options = {
+          title: '',
+          legend: { position: 'top' },
+          chartArea: { width: '75%', height: '65%' },
+          hAxis: { title: '商品名' },
+          vAxis: { title: '金額／個数', minValue: 0 },
+          colors: ['#ff9800', '#4a90e2'],
+          height: 320,
+        };
+        const chart = new google.visualization.ColumnChart(document.getElementById('productSalesChart'));
+        chart.draw(data, options);
+      }
+    }
+
+    // ==== 売上履歴 ====
+    function renderSalesList() {
+      salesList.innerHTML = '';
+      let sum = 0;
+      salesData.forEach((sale, i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span>
+            <b>${sale.name}</b> × ${sale.count}個 = <b>${sale.total}円</b>
+            <small style="margin-left:1em;color:#666;">${sale.timestamp}</small>
+            <span style="margin-left:1em;color:#117533;font-weight:bold;">
+              利益: ${sale.profit ?? (sale.price - (sale.cost ?? 0)) * sale.count}円
+            </span>
+          </span>
+          <button class="del-btn" onclick="deleteSale(${i})">削除</button>
+        `;
+        salesList.appendChild(li);
+        sum += sale.total;
+      });
+      totalSales.textContent = sum;
+    }
+
+    // ==== 仕入れ原価 ====
+    const purchaseCostInput = document.getElementById('purchaseCost');
+    purchaseCostInput.value = purchaseCost;
+    purchaseCostInput.onchange = () => {
+      purchaseCost = Number(purchaseCostInput.value || 0);
+      localStorage.setItem('purchaseCost', purchaseCost);
+      renderProfitSummary();
+    };
+
+    // ==== CSV出力 ====
+    function toCsvRow(arr) {
+      return arr.map(v =>
+        typeof v === 'string' && (v.includes(',') || v.includes('"'))
+          ? '"' + v.replace(/"/g, '""') + '"'
+          : v
+      ).join(',');
+    }
+    function downloadCsv(filename, rows) {
+      const csv = rows.map(toCsvRow).join('\r\n');
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    document.getElementById('downloadItemCsv').onclick = function() {
+      const header = ['商品名','売価','原価'];
+      const rows = [header].concat(
+        itemMaster.map(i => [i.name, i.price, i.cost])
+      );
+      downloadCsv('item_master.csv', rows);
+    };
+    document.getElementById('downloadSalesCsv').onclick = function() {
+      const header = ['商品名','個数','単価','合計','利益','日時'];
+      const rows = [header].concat(
+        salesData.map(s => [s.name, s.count, s.price, s.total, s.profit, s.timestamp])
+      );
+      downloadCsv('sales_history.csv', rows);
+    };
+
+    // ==== すべて再描画 ====
+    function renderAll() {
+      renderRegisteredItems();
+      renderProductButtons();
+      renderSalesList();
+      renderProfitSummary();
+      renderProductSummaryTable();
+      renderProductSalesChart();
+    }
+
+    // ==== 初期化 ====
+    renderAll();
+  </script>
+</body>
+</html>
