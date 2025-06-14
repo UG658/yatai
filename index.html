@@ -574,9 +574,15 @@
       google.charts.load('current', { packages: ['corechart'] });
       google.charts.setOnLoadCallback(drawChartAmount);
       function drawChartAmount() {
+        // salesDataに登場する全商品名を集める
+        const allProductNamesSet = new Set();
+        salesData.forEach(sale => allProductNamesSet.add(sale.name));
+        // itemMasterの削除済み商品も含める
+        itemMaster.forEach(item => allProductNamesSet.add(item.name));
+        // 商品ごとに売上金額を集計
         const summary = {};
-        itemMaster.forEach(item => {
-          summary[item.name] = { total: 0 };
+        allProductNamesSet.forEach(name => {
+          summary[name] = { total: 0 };
         });
         salesData.forEach(sale => {
           if (summary[sale.name]) {
@@ -617,9 +623,14 @@
       google.charts.load('current', { packages: ['corechart'] });
       google.charts.setOnLoadCallback(drawChartCount);
       function drawChartCount() {
+        // salesDataに登場する全商品名を集める
+        const allProductNamesSet = new Set();
+        salesData.forEach(sale => allProductNamesSet.add(sale.name));
+        itemMaster.forEach(item => allProductNamesSet.add(item.name));
+        // 商品ごとに販売個数を集計
         const summary = {};
-        itemMaster.forEach(item => {
-          summary[item.name] = { count: 0 };
+        allProductNamesSet.forEach(name => {
+          summary[name] = { count: 0 };
         });
         salesData.forEach(sale => {
           if (summary[sale.name]) {
