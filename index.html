@@ -339,6 +339,55 @@
       productVisibility = JSON.parse(localStorage.getItem('productVisibility') || '{}');
     } catch (e) { productVisibility = {}; }
 
+    // ==== 連打売上記録用グローバル管理変数 ====
+    let tapCountProductName = null;
+    let tapCount = 0;
+    let tapCountTimerId = null;
+    let tapCountButtonElm = null;
+
+    function clearTapCountDisplay() {
+      if (tapCountButtonElm) {
+        // ボタン上のカウント表示を消す
+        const counterSpan = tapCountButtonElm.querySelector('.tap-counter');
+        if (counterSpan) {
+          counterSpan.remove();
+        }
+        tapCountButtonElm = null;
+      }
+    }
+
+    function confirmTapCountRecord() {
+      if (tapCountProductName && tapCount > 0) {
+        // 商品情報取得
+        const item = itemMaster.find(i => i.name === tapCountProductName);
+        if (item) {
+          const count = tapCount;
+          const total = item.price * count;
+          const profit = (item.price - item.cost) * count;
+          const now = new Date();
+          const timestamp = now.toLocaleString('ja-JP', { hour12: false });
+          salesData.unshift({
+            name: item.name,
+            count,
+            price: item.price,
+            cost: item.cost,
+            total,
+            profit,
+            timestamp
+          });
+          localStorage.setItem('salesData', JSON.stringify(salesData));
+        }
+      }
+      tapCountProductName = null;
+      tapCount = 0;
+      if (tapCountTimerId) {
+        clearTimeout(tapCountTimerId);
+        tapCountTimerId = null;
+      }
+      clearTapCountDisplay();
+      renderAll(); // 集計・履歴更新
+    }
+
     function renderProductButtons() {
       productButtons.innerHTML = '';
       // 50音順（日本語ロケール順）でソート
@@ -381,17 +430,33 @@
         if (productVisibility[item.name] === false) return;
         const btn = document.createElement('button');
         btn.className = 'product-btn';
-        btn.textContent = `${item.name}（${item.price}円）`;
+        btn.innerHTML = `${item.name}（${item.price}円）`;
+        // タップ回数表示用span
+        if (tapCountProductName === item.name && tapCount > 0) {
+          btn.innerHTML += ` <span class="tap-counter" style="background:#fff3b0;color:#a67c00;font-weight:bold;border-radius:7px;padding:0.2em 0.7em;margin-left:0.6em;box-shadow:0 1px 2px #0001;">${tapCount}</span>`;
+          tapCountButtonElm = btn;
+        }
         btn.onclick = () => {
-          // 1個売れたとして即記録
-          const count = 1;
-          const total = item.price * count;
-          const profit = (item.price - item.cost) * count;
-          const now = new Date();
-          const timestamp = now.toLocaleString('ja-JP', { hour12: false });
-          salesData.unshift({ name: item.name, count, price: item.price, cost: item.cost, total, profit, timestamp });
-          localStorage.setItem('salesData', JSON.stringify(salesData));
-          renderAll();
+          // 同じ商品を連打中の場合
+          if (tapCountProductName === item.name) {
+            tapCount += 1;
+            // タイマーをリセット
+            if (tapCountTimerId) clearTimeout(tapCountTimerId);
+            tapCountTimerId = setTimeout(confirmTapCountRecord, 2000);
+            // カウント表示を更新
+            renderProductButtons();
+          } else {
+            // 直前のカウントが残っていれば確定
+            if (tapCountProductName && tapCount > 0) {
+              confirmTapCountRecord();
+            }
+            // 新しい商品でカウント開始
+            tapCountProductName = item.name;
+            tapCount = 1;
+            if (tapCountTimerId) clearTimeout(tapCountTimerId);
+            tapCountTimerId = setTimeout(confirmTapCountRecord, 2000);
+            renderProductButtons();
+          }
         };
         productButtons.appendChild(btn);
         visibleCount++;
@@ -438,15 +503,20 @@
     const totalSales = document.getElementById('totalSales');
     const profitSummary = document.getElementById('profitSummary');
     function renderProfitSummary() {
-      const totalProfit = salesData.reduce((sum, sale) => sum + (sale.profit ?? 0), 0);
-      const profitAfterCost = totalProfit - purchaseCost;
-      if (profitAfterCost < 0) {
-        profitSummary.textContent = `黒字まであと ${-profitAfterCost} 円`;
-        profitSummary.className = '';
-      } else {
-        profitSummary.textContent = `黒字です！累計利益 ${profitAfterCost} 円`;
-        profitSummary.className = 'positive';
-      }
+      // 概算利益: 全売上履歴について、(売値-原価)×売れた個数 の合計
+      const estimatedProfit = salesData.reduce(
+        (sum, sale) => sum + ((sale.price - sale.cost) * sale.count), 0
+      );
+      // 合計売上額
+      const totalSalesAmount = salesData.reduce((sum, sale) => sum + (sale.total ?? 0), 0);
+      // 累計利益: 合計売上額 - 仕入原価合計
+      const cumulativeProfit = totalSalesAmount - purchaseCost;
+
+      let html = '';
+      html += `<div>概算利益: <span style="color:#0a4b1f;">${estimatedProfit.toLocaleString()}</span>円</div>`;
+      html += `<div style="margin-top:0.3em;">累計利益: <span style="color:${cumulativeProfit >= 0 ? '#0a4b1f' : '#b13030'};">${cumulativeProfit.toLocaleString()}</span>円</div>`;
+      profitSummary.innerHTML = html;
+      profitSummary.className = cumulativeProfit >= 0 ? 'positive' : '';
     }
 
     // ==== 商品別集計表 ====
@@ -462,10 +532,9 @@
           summary[sale.name].count += sale.count;
         }
       });
-      // 上位5品目のみ
+      // 全商品分を表示
       const sortedArr = Object.entries(summary)
-        .sort((a,b)=>b[1].total-a[1].total)
-        .slice(0,5);
+        .sort((a,b)=>b[1].total-a[1].total);
       let html = `<table id="productSummaryTable"><tr>
         <th>商品名</th><th>売上金額</th><th>販売個数</th>
       </tr>`;
