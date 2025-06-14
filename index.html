@@ -522,27 +522,46 @@
     // ==== 商品別集計表 ====
     function renderProductSummaryTable() {
       const wrapper = document.getElementById('productSummaryTableWrapper');
+      // 1. 全売上履歴に登場する全商品名を収集
+      const allProductNamesSet = new Set();
+      // itemMasterの商品名
+      itemMaster.forEach(item => allProductNamesSet.add(item.name));
+      // salesDataに出現する商品名
+      salesData.forEach(sale => allProductNamesSet.add(sale.name));
+      // 2. 商品名ごとに売上集計
       const summary = {};
-      itemMaster.forEach(item => {
-        summary[item.name] = { total: 0, count: 0, price: item.price };
+      allProductNamesSet.forEach(name => {
+        // itemMasterに存在する場合はその情報を使う
+        const item = itemMaster.find(i => i.name === name);
+        summary[name] = {
+          total: 0,
+          count: 0,
+          price: item ? item.price : null
+        };
       });
       salesData.forEach(sale => {
+        // 必ずsummaryに存在する
         if (summary[sale.name]) {
           summary[sale.name].total += sale.total;
           summary[sale.name].count += sale.count;
+          // priceがnullの場合はsale.priceを採用
+          if (summary[sale.name].price === null && sale.price !== undefined) {
+            summary[sale.name].price = sale.price;
+          }
         }
       });
-      // 全商品分を表示
+      // 3. 表示用に売上金額順でソート
       const sortedArr = Object.entries(summary)
-        .sort((a,b)=>b[1].total-a[1].total);
+        .sort((a, b) => b[1].total - a[1].total);
       let html = `<table id="productSummaryTable"><tr>
-        <th>商品名</th><th>売上金額</th><th>販売個数</th>
+        <th>商品名</th><th>売上金額</th><th>販売個数</th><th>単価</th>
       </tr>`;
       for (const [name, s] of sortedArr) {
         html += `<tr>
           <td>${name}</td>
           <td class="highlight-amount">${s.total}</td>
           <td class="highlight-count">${s.count}</td>
+          <td>${s.price !== null && s.price !== undefined ? s.price + '円' : '<span style="color:#b13030;">?</span>'}</td>
         </tr>`;
       }
       html += `</table>`;
